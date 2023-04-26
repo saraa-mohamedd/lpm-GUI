@@ -1,6 +1,7 @@
 // import * as React from 'react';
 // import { useState } from "react";
 import React, { useState } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -13,78 +14,70 @@ import { useEffect } from "react";
 
 
 
-function createData(name, calories, fat, carbs, protein) {
-  return { name, calories, fat, carbs, protein };
-}
-
-const rows = [
-  createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-  createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-  createData('Eclair', 262, 16.0, 24, 6.0),
-  createData('Cupcake', 305, 3.7, 67, 4.3),
-  createData('Gingerbread', 356, 16.0, 49, 3.9),
-];
-
 export default function DenseTable() {
   const [processes, setProcesses] = useState([]);
   useEffect(() => {
     const interval = setInterval(() => {
       getProcesses();
     }
-      , 1000);
+      , 2000);
     return () => clearInterval(interval);
   }, []);
-
   
+
   { console.log("hello"); }
   async function getProcesses() {
     setProcesses(await invoke("get_process_vector"));
   }
   return (
-    <> 
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650, maxHeight: 150 }} size="small" aria-label="a dense table">
+    <>
+      {/* <TableContainer component={Paper}> */}
+        {/* <Table stickyHeader sx={{ minWidth: 650, maxHeight: 150 }} size="small" aria-label="a dense table"> */}
+    <Paper sx={{ width: '100%'}}>
+      <TableContainer sx={{ maxHeight: '90vh'}}>
+        <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell>Process Name</TableCell>
-              <TableCell align="right">PID</TableCell>
-              <TableCell align="right">PPID</TableCell>
-              <TableCell align="right">State</TableCell>
+              <TableCell align="left" width= '9vw'>Process Name</TableCell>
+              <TableCell align="right" width= '9vw'>PID</TableCell>
+              <TableCell align="right" width= '9vw'>PPID</TableCell>
+              <TableCell align="right" width= '9vw'>State</TableCell>
+              <TableCell align="right" width= '9vw'>Priority</TableCell>
+              <TableCell align="right" width= '9vw'>Niceness</TableCell>
+              <TableCell align="right" width= '9vw'>Start Time</TableCell>
+              <TableCell align="right" width= '9vw'>Vsize</TableCell>
+              <TableCell align="right" width= '9vw'>RSS</TableCell>
+              <TableCell align="right" width= '9vw'>Threads</TableCell>
+              <TableCell align="right" width= '9vw'>CPU Time</TableCell>
+
             </TableRow>
           </TableHead>
           <TableBody>
-            {/* {rows.map((row) => (
-            <TableRow
-              key={row.name}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-            >
-              <TableCell component="th" scope="row">
-                {row.name}
-              </TableCell>
-              <TableCell align="right">{row.calories}</TableCell>
-              <TableCell align="right">{row.fat}</TableCell>
-              <TableCell align="right">{row.carbs}</TableCell>
-              <TableCell align="right">{row.protein}</TableCell>
-            </TableRow>
-          ))} */}
             {
               processes.map(p => (
                 <TableRow
                   key={p.pid}
                   sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                 >
-                  <TableCell component="th" scope="row">
+                  <TableCell align="left" component="th">
                     {p.name}
                   </TableCell>
-                  <TableCell align="right">{p.pid}</TableCell>
-                  <TableCell align="right">{p.ppid}</TableCell>
-                  <TableCell align="right">{p.state}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.pid}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.ppid}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.state}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.priority}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.niceness}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.start_time}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.vsize}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.rss}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.threads}</TableCell>
+                  <TableCell align="right" width= '9vw'>{p.cpu_time}</TableCell>
                 </TableRow>
               ))
             }
           </TableBody>
         </Table>
-      </TableContainer>
+      {/* </TableContainer> */}
       {/* <form
       onSubmit={(e) => {
         e.preventDefault();
@@ -94,6 +87,8 @@ export default function DenseTable() {
     >
       <button type="submit">Get Processes</button>
     </form> */}
+    </TableContainer>
+    </Paper>
     </>
   );
 }
