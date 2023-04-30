@@ -10,13 +10,16 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@emotion/react": "^11.10.6",
-    "@emotion/styled": "^11.10.6",
+    "@emotion/react": "^11.10.8",
+    "@emotion/styled": "^11.10.8",
     "@mui/material": "^5.12.2",
-    "@mui/x-data-grid": "^6.2.1",
     "@tauri-apps/api": "^1.2.0",
+    "chart.js": "^4.3.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.10.0",
+    "styled-components": "^5.3.10"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.2.3",

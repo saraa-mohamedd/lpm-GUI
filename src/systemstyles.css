@@ -1,0 +1,85 @@
+.column {
+    float: left;
+    width: 20%;
+    background-color: rgb(249, 253, 252);
+    padding: 5px 20px;
+    border-radius: 50px;
+    margin-left: 10px;
+    margin-right: 10px;
+    box-shadow:  4px 4px 8px rgba(41, 39, 39, 0.2);
+  }
+  
+.diagram {
+    float: left;
+    width: 40%;
+    padding: 5px 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.info {
+    width: 80%;
+    float: right;
+    padding: 5px 20px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+  /* Clear floats after the columns */
+.row:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.row {
+    display: flex;
+    justify-self: center;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 30px 30px 30px; 
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.card {
+    display: flex;
+    justify-self: center;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 30px 30px 30px; 
+    margin-left: 10px;
+    margin-right: 10px;
+    width: 60vw;
+    height: 300px;
+    background-color: rgb(249, 253, 252);
+    box-shadow:  4px 4px 8px rgba(41, 39, 39, 0.2);
+    border-radius: 50px;
+}
+
+h1.a {
+    margin-top: 25px;
+    text-align: center;
+    font-size: 30px;
+    font-weight: 500;
+    color: #0f0f0f;
+    margin-bottom: 25px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+}
+
+h4.a{
+    margin-top: 25px;
+    text-align: left;
+    font-size: 20px;
+    font-weight: 500;
+    color: #0f0f0f;
+    margin-bottom: 25px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+}
+Doughnut.system {
+    margin-top: 25px;
+    margin-bottom: 25px;
+    margin-left: 25px;
+    margin-right: 25px;
+}

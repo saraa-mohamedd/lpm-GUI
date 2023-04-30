@@ -5,7 +5,7 @@ export const Nav = styled.nav`
 background: #78c2a7;
 height: 40px;
 display: flex;
-justify-content: space-between;
+justify-content: center;
 padding: 0.2rem calc((10vw - 100px) / 2);
 z-index: 80;
 border-radius: 10px 10px 10px 10px;
@@ -16,7 +16,7 @@ color: #ffffff;
 display: flex;
 align-items: center;
 text-decoration: none;
-font-family: 'Manrope', sans-serif;
+font-family: 'Inter', sans-serif;
 font-weight: 600;
 padding: 0 1rem;
 height: 100%;
@@ -26,6 +26,11 @@ cursor: pointer;
 }
 &.active {
 	color: #2a7552;
+    background-color: #ffffff;
+    border-radius: 10px 10px 10px 10px;
+    padding: 0 1rem;
+    height: 80%;
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
 }
 `;
 
