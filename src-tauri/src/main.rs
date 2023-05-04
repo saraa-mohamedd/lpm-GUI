@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use procfs::process::*;
-use sysinfo::{System, CpuExt, SystemExt};
+use sysinfo::{System, CpuExt, SystemExt, UserExt};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -45,33 +45,27 @@ fn get_process_vector() -> Vec<Proc> {
 }
 
 #[tauri::command]
-fn get_cpu_perc()-> Vec<f32>{
+fn get_perc()-> Vec<f32>{
     let mut sys = System::new_all();
     sys.refresh_all();
     sys.refresh_cpu();
     std::thread::sleep(System::MINIMUM_CPU_UPDATE_INTERVAL);
     sys.refresh_cpu();
-    let mut cpu_per:Vec<f32> = Vec::new();
-    cpu_per.push(sys.global_cpu_info().cpu_usage());
-    cpu_per.push(100.0 - sys.global_cpu_info().cpu_usage());
-    cpu_per
+    let mut per:Vec<f32> = Vec::new();
+    per.push(sys.global_cpu_info().cpu_usage()); //CPU%
+    per.push(100.0 - sys.global_cpu_info().cpu_usage()); //100-CPU%
+    per.push((sys.used_memory() as f32/sys.total_memory() as f32) * 100.0); //MEM%
+    per.push(100.0 - ((sys.used_memory() as f32/sys.total_memory() as f32) * 100.0)); //100-MEM%
+    per.push((sys.used_swap() as f32/sys.total_swap() as f32) * 100.0); //SWAP%
+    per.push(100.0 - ((sys.used_swap() as f32/sys.total_swap() as f32) * 100.0)); //100-SWAP%
+    per.push(sys.global_cpu_info().frequency() as f32); //CPU Freq
+    per.push(sys.total_memory() as f32 * 1e-9); //Total Mem
+    per.push(sys.total_swap() as f32 * 1e-9); //Total Swap
+    
+
+    per
 }
 
-#[tauri::command]
-fn get_cpu_info() -> Vec<String>{
-    let mut sys = System::new_all();
-    sys.refresh_all();
-    sys.refresh_cpu();
-    std::thread::sleep(System::MINIMUM_CPU_UPDATE_INTERVAL);
-    sys.refresh_cpu();
-    let mut cpu_info:Vec<String> = Vec::new();
-
-    cpu_info.push(format!("Frequency: {} MHz", sys.global_cpu_info().frequency()));
-    cpu_info.push(format!("%Used: {}%", sys.global_cpu_info().cpu_usage()));   
-    cpu_info.push(format!("%Idle: {}%", 100.0 - sys.global_cpu_info().cpu_usage()));
-
-    cpu_info
-}
 
 #[tauri::command]
 fn get_cpus_data() -> Vec<f32>{
@@ -109,41 +103,47 @@ fn get_cpus_names() -> Vec<String>{
     cpus_names
 }
 
-
 #[tauri::command]
-fn get_mem_perc()-> Vec<f32>{
+fn get_overall_info() -> Vec<String>{
     let mut sys = System::new_all();
     sys.refresh_all();
-    sys.refresh_memory();
-    std::thread::sleep(System::MINIMUM_CPU_UPDATE_INTERVAL);
-    sys.refresh_memory();
-    let mut mem_per:Vec<f32> = Vec::new();
-    mem_per.push((sys.used_memory() as f32/sys.total_memory() as f32) * 100.0);
-    mem_per.push(100.0 - ((sys.used_memory() as f32/sys.total_memory() as f32) * 100.0));
-    mem_per
-}
+    let mut overall_info:Vec<String> = Vec::new();
 
-#[tauri::command]
-fn get_swap_perc()-> Vec<f32>{
-    let mut sys = System::new_all();
-    std::thread::sleep(System::MINIMUM_CPU_UPDATE_INTERVAL);
-    sys.refresh_all();
-    let mut swap_per:Vec<f32> = Vec::new();
-    swap_per.push((sys.used_swap() as f32/sys.total_swap() as f32) * 100.0);
-    swap_per.push(100.0 - ((sys.used_swap() as f32/sys.total_swap() as f32) * 100.0));
-    swap_per
+
+    //push system name
+    overall_info.push(format!("System Name: {:?}", sys.name().unwrap()));
+    //push system manufacturer
+    overall_info.push(format!("CPU Type: {:?}", sys.cpus()[0].brand()));
+    //push system model
+    // overall_info.push(format!("System Model: {}", sys.model().unwrap()));
+    // //push system type
+    // overall_info.push(format!("System Type: {}", sys.host_type().unwrap()));
+    // //push os name
+    // overall_info.push(format!("OS Name: {}", sys.os_name()));
+    //push os version
+    overall_info.push(format!("OS Version: {:?}", sys.os_version().unwrap()));
+    overall_info.push(format!("# of Disks: {:?}", sys.disks().len()));
+    //push os build
+    // overall_info.push(format!("OS Build: {}", sys.os_build().unwrap()));
+    //push os manufacturer
+    // overall_info.push(format!("OS Manufacturer: {}", sys.os_manufacturer().unwrap()));
+    //push uptime
+    overall_info.push(format!("{}", sys.uptime()));
+   
+    //push processor
+    overall_info.push(format!("Processor: {:?}", sys.cpus()[0].name()));
+
+    overall_info
 }
 
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_process_vector, 
-            get_cpu_perc, 
-            get_cpu_info, 
-            get_mem_perc, 
-            get_swap_perc, 
+            get_perc, 
             get_cpus_data,
-            get_cpus_names ])
+            get_cpus_names,
+            get_overall_info ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

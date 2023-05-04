@@ -8,7 +8,6 @@ display: flex;
 justify-content: center;
 padding: 0.2rem calc((10vw - 100px) / 2);
 z-index: 80;
-border-radius: 10px 10px 10px 10px;
 `;
 
 export const NavLink = styled(Link)`
@@ -23,14 +22,19 @@ height: 100%;
 cursor: pointer;
 :hover {
     color: #2a7552;
+    // box-shadow: 4px 4px rgba(68, 140, 121, 1);
+    // height: 80%;
+    // padding: 0 1rem;
+    // background-color: #ffffff;
 }
 &.active {
 	color: #2a7552;
     background-color: #ffffff;
-    border-radius: 10px 10px 10px 10px;
     padding: 0 1rem;
     height: 80%;
-    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+    box-shadow: 3px 3px rgba(68, 140, 121, 1);
+    margin-left: 0.5rem;
+
 }
 `;
 

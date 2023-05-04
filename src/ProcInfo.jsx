@@ -35,8 +35,8 @@ export default function ProcView() {
         height: '100vh',
         padding: '15px 0px 0px 0px',
       }} sx={{ width: '100%' }}>
-    <Paper sx={{ height: '50%', width: '97%', borderRadius: "20px"}}>
-      <TableContainer sx={{ maxHeight: '50vh', borderRadius: "20px" }}>
+    <Paper sx={{ height: '50%', width: '97%'}}>
+      <TableContainer sx={{ maxHeight: '50vh'}}>
         <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
