@@ -1,604 +1,628 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Table from '@mui/material/Table';
 import Box from '@mui/material/Box';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
 import { invoke } from "@tauri-apps/api/tauri";
 import { useEffect } from "react";
+import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, AreaChart, Area } from 'recharts';
+import {
+  DataGridPremium, GridScrollArea, GridToolbar, GridRow,
+  GridColumnHeaders, useGridApiRef, gridFilteredSortedRowIdsSelector
+} from '@mui/x-data-grid-premium';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 
+const MemoizedRow = React.memo(GridRow);
+const MemoizedColumnHeaders = React.memo(GridColumnHeaders);
+
+const tabletheme = createTheme({
+  palette: {
+    primary: {
+      main: '#1a1a1a',
+    },
+    secondary: {
+      main: '#1a1a1a',
+    },
+  },
+});
+
+const columns = [
+  {
+    field: 'processName', headerName: 'Process Name', width: 250,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'pid',
+    headerName: 'PID',
+    width: 150,
+    headerClassName: 'theme--header',
+  },
+  {
+    field: 'ppid',
+    headerName: 'PPID',
+    width: 125,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'state',
+    headerName: 'State',
+    width: 125,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'priority',
+    headerName: 'Priority',
+    width: 150,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'niceness',
+    headerName: 'Niceness',
+    width: 150,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'startTime',
+    headerName: 'Start Time',
+    width: 150,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'vsize',
+    headerName: 'Vsize',
+    width: 150,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'rss',
+    headerName: 'RSS',
+    width: 150,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'threads',
+    headerName: 'Threads',
+    width: 150,
+    headerClassName: 'theme--header',
+
+  },
+  {
+    field: 'cpuTime',
+    headerName: '%CPU',
+    width: 150,
+    headerClassName: 'theme--header',
+
+  },
+];
+const data = [];
+let filteredBool = 0;
+let filteredRows = [];
+let filterValue = "";
+let fieldValue = "";
+let filterOperator = "";
 
 export default function ProcView() {
+
+
+
+  const [cpuChartData, setCpuChartData] = useState(data);
+  const [memoryChartData, setMemoryChartData] = useState(data);
+
+  const [sysinfo, setSysInfo] = useState([]);
+
   const [processes, setProcesses] = useState([]);
+
+  async function fetchData() {
+    setSysInfo(await invoke('get_sysinfo'));
+
+  }
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [sysinfo]);
+
+
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      cpuChartData.push({ name: "", CPU: addCpuTimes() });
+      var newChartData = cpuChartData.slice(-50);
+      newChartData.push({ name: "", CPU: addCpuTimes() });
+      setCpuChartData(newChartData);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cpuChartData, sysinfo]);
+
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      memoryChartData.push({ name: "", Memory: addMemoryTimes() });
+
+      const newMemoryData = memoryChartData.slice(-50);
+      newMemoryData.push({ name: "", Memory: addMemoryTimes() });
+      setMemoryChartData(newMemoryData);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [memoryChartData, sysinfo]);
+
+
+
+
   useEffect(() => {
     const interval = setInterval(() => {
       getProcesses();
     }
-      , 2000);
+      , 5000);
     return () => clearInterval(interval);
   }, []);
-  
 
-  { console.log("hello"); }
   async function getProcesses() {
     setProcesses(await invoke("get_process_vector"));
   }
 
+  const rows = processes.map((process) => {
+    return {
+      id: process.pid,
+      processName: process.name,
+      pid: process.pid,
+      ppid: process.ppid,
+      state: process.state,
+      priority: process.priority,
+      niceness: process.niceness,
+      startTime: process.start_time,
+      vsize: Math.round(process.vsize * Math.pow(10, 2)) / Math.pow(10, 2),
+      rss: process.rss,
+      threads: process.threads,
+      cpuTime: Math.round(process.cpu_time * Math.pow(10, 2)) / Math.pow(10, 2),
+
+    }
+  })
+
+
+  if (filteredBool == 0) {
+
+    filteredRows = rows;
+  }
+
+  const addCpuTimes = () => {
+    let sum = 0;
+    for (let i = 0; i < filteredRows.length; i++) {
+      sum += filteredRows[i].cpuTime;
+    }
+    return sum;
+  }
+  const addMemoryTimes = () => {
+    let sum = 0;
+    for (let i = 0; i < filteredRows.length; i++) {
+      sum += filteredRows[i].rss;
+    }
+    return sum;
+  }
+
+  useEffect(() => {
+    getProcesses();
+  }, []);
+
+  const apiRef = useGridApiRef();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log(filteredBool);
+      if (filteredBool == 1) {
+        getFilterResult(filterOperator, filterValue, fieldValue);
+        console.log("op: " + filterOperator + " val: " + filterValue + " field: " + fieldValue);
+        console.log("in if");
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [filteredRows]);
+
+
+
+  const getFilterResult = (filterOperator, filterValue, fieldValue) => {
+    if (filterOperator == "contains") {
+      if (fieldValue == "processName") {
+        filteredRows = rows.filter((row) => row.processName.includes(filterValue))
+      }
+      if (fieldValue == "pid") {
+        filteredRows = rows.filter((row) => row.pid.includes(filterValue))
+      }
+      if (fieldValue == "ppid") {
+        filteredRows = rows.filter((row) => row.ppid.includes(filterValue))
+      }
+      if (fieldValue == "state") {
+        filteredRows = rows.filter((row) => row.state.includes(filterValue))
+      }
+      if (fieldValue == "priority") {
+        filteredRows = rows.filter((row) => row.priority.includes(filterValue))
+      }
+      if (fieldValue == "niceness") {
+        filteredRows = rows.filter((row) => row.niceness.includes(filterValue))
+      }
+      if (fieldValue == "startTime") {
+        filteredRows = rows.filter((row) => row.startTime.includes(filterValue))
+      }
+      if (fieldValue == "vsize") {
+        filteredRows = rows.filter((row) => row.vsize.includes(filterValue))
+      }
+      if (fieldValue == "rss") {
+        filteredRows = rows.filter((row) => row.rss.includes(filterValue))
+
+      }
+      if (fieldValue == "threads") {
+        filteredRows = rows.filter((row) => row.threads.includes(filterValue))
+      }
+      if (fieldValue == "cpuTime") {
+        filteredRows = rows.filter((row) => row.cpuTime.includes(filterValue))
+      }
+    }
+    if (filterOperator == "equals") {
+      if (fieldValue == "processName") {
+        filteredRows = rows.filter((row) => row.processName == filterValue)
+      }
+      if (fieldValue == "pid") {
+        filteredRows = rows.filter((row) => row.pid == filterValue)
+      }
+      if (fieldValue == "ppid") {
+        filteredRows = rows.filter((row) => row.ppid == filterValue)
+      }
+      if (fieldValue == "state") {
+        filteredRows = rows.filter((row) => row.state == filterValue)
+      }
+      if (fieldValue == "priority") {
+        filteredRows = rows.filter((row) => row.priority == filterValue)
+      }
+      if (fieldValue == "niceness") {
+        filteredRows = rows.filter((row) => row.niceness == filterValue)
+      }
+      if (fieldValue == "startTime") {
+        filteredRows = rows.filter((row) => row.startTime == filterValue)
+      }
+      if (fieldValue == "vsize") {
+        filteredRows = rows.filter((row) => row.vsize == filterValue)
+      }
+      if (fieldValue == "rss") {
+        filteredRows = rows.filter((row) => row.rss == filterValue)
+
+      }
+      if (fieldValue == "threads") {
+        filteredRows = rows.filter((row) => row.threads == filterValue)
+
+      }
+      if (fieldValue == "cpuTime") {
+        filteredRows = rows.filter((row) => row.cpuTime == filterValue)
+
+
+      }
+    }
+    if (filterOperator == "greaterThan") {
+      if (fieldValue == "pid") {
+        filteredRows = rows.filter((row) => row.pid > filterValue)
+      }
+      if (fieldValue == "ppid") {
+        filteredRows = rows.filter((row) => row.ppid > filterValue)
+      }
+      if (fieldValue == "priority") {
+        filteredRows = rows.filter((row) => row.priority > filterValue)
+      }
+      if (fieldValue == "niceness") {
+        filteredRows = rows.filter((row) => row.niceness > filterValue)
+      }
+      if (fieldValue == "startTime") {
+        filteredRows = rows.filter((row) => row.startTime > filterValue)
+      }
+      if (fieldValue == "vsize") {
+        filteredRows = rows.filter((row) => row.vsize > filterValue)
+      }
+      if (fieldValue == "rss") {
+        filteredRows = rows.filter((row) => row.rss > filterValue)
+      }
+      if (fieldValue == "threads") {
+        filteredRows = rows.filter((row) => row.threads > filterValue)
+      }
+      if (fieldValue == "cpuTime") {
+        filteredRows = rows.filter((row) => row.cpuTime > filterValue)
+      }
+    }
+
+    if (filterOperator == "startsWith") {
+      if (fieldValue == "processName") {
+        filteredRows = rows.filter((row) => row.processName.startsWith(filterValue))
+      }
+      if (fieldValue == "pid") {
+        filteredRows = rows.filter((row) => row.pid.startsWith(filterValue))
+      }
+      if (fieldValue == "ppid") {
+        filteredRows = rows.filter((row) => row.ppid.startsWith(filterValue))
+      }
+      if (fieldValue == "state") {
+        filteredRows = rows.filter((row) => row.state.startsWith(filterValue))
+      }
+      if (fieldValue == "priority") {
+        filteredRows = rows.filter((row) => row.priority.startsWith(filterValue))
+      }
+      if (fieldValue == "niceness") {
+        filteredRows = rows.filter((row) => row.niceness.startsWith(filterValue))
+      }
+      if (fieldValue == "startTime") {
+        filteredRows = rows.filter((row) => row.startTime.startsWith(filterValue))
+      }
+      if (fieldValue == "vsize") {
+        filteredRows = rows.filter((row) => row.vsize.startsWith(filterValue))
+      }
+      if (fieldValue == "rss") {
+        filteredRows = rows.filter((row) => row.rss.startsWith(filterValue))
+
+      }
+      if (fieldValue == "threads") {
+        filteredRows = rows.filter((row) => row.threads.startsWith(filterValue))
+      }
+      if (fieldValue == "cpuTime") {
+        filteredRows = rows.filter((row) => row.cpuTime.startsWith(filterValue))
+      }
+
+    }
+    if (filterOperator == "endsWith") {
+      if (fieldValue == "processName") {
+        filteredRows = rows.filter((row) => row.processName.endsWith(filterValue))
+      }
+      if (fieldValue == "pid") {
+        filteredRows = rows.filter((row) => row.pid.endsWith(filterValue))
+      }
+      if (fieldValue == "ppid") {
+        filteredRows = rows.filter((row) => row.ppid.endsWith(filterValue))
+      }
+      if (fieldValue == "state") {
+        filteredRows = rows.filter((row) => row.state.endsWith(filterValue))
+      }
+      if (fieldValue == "priority") {
+        filteredRows = rows.filter((row) => row.priority.endsWith(filterValue))
+      }
+      if (fieldValue == "niceness") {
+        filteredRows = rows.filter((row) => row.niceness.endsWith(filterValue))
+      }
+      if (fieldValue == "startTime") {
+        filteredRows = rows.filter((row) => row.startTime.endsWith(filterValue))
+      }
+      if (fieldValue == "vsize") {
+        filteredRows = rows.filter((row) => row.vsize.endsWith(filterValue))
+      }
+      if (fieldValue == "rss") {
+        filteredRows = rows.filter((row) => row.rss.endsWith(filterValue))
+
+      }
+      if (fieldValue == "threads") {
+        filteredRows = rows.filter((row) => row.threads.endsWith(filterValue))
+      }
+      if (fieldValue == "cpuTime") {
+        filteredRows = rows.filter((row) => row.cpuTime.endsWith(filterValue))
+      }
+    }
+    if (filterOperator == "isEmpty") {
+      if (fieldValue == "processName") {
+        filteredRows = rows.filter((row) => row.processName == "")
+      }
+      if (fieldValue == "pid") {
+        filteredRows = rows.filter((row) => row.pid == "")
+      }
+      if (fieldValue == "ppid") {
+        filteredRows = rows.filter((row) => row.ppid == "")
+      }
+      if (fieldValue == "state") {
+        filteredRows = rows.filter((row) => row.state == "")
+      }
+      if (fieldValue == "priority") {
+        filteredRows = rows.filter((row) => row.priority == "")
+      }
+      if (fieldValue == "niceness") {
+        filteredRows = rows.filter((row) => row.niceness == "")
+      }
+      if (fieldValue == "startTime") {
+        filteredRows = rows.filter((row) => row.startTime == "")
+      }
+      if (fieldValue == "vsize") {
+        filteredRows = rows.filter((row) => row.vsize == "")
+      }
+      if (fieldValue == "rss") {
+        filteredRows = rows.filter((row) => row.rss == "")
+
+      }
+      if (fieldValue == "threads") {
+        filteredRows = rows.filter((row) => row.threads == "")
+      }
+      if (fieldValue == "cpuTime") {
+        filteredRows = rows.filter((row) => row.cpuTime == "")
+      }
+    }
+
+    if (filterOperator == "isNotEmpty") {
+      if (fieldValue == "processName") {
+        filteredRows = rows.filter((row) => row.processName != "")
+      }
+      if (fieldValue == "pid") {
+        filteredRows = rows.filter((row) => row.pid != "")
+      }
+      if (fieldValue == "ppid") {
+        filteredRows = rows.filter((row) => row.ppid != "")
+      }
+      if (fieldValue == "state") {
+        filteredRows = rows.filter((row) => row.state != "")
+      }
+      if (fieldValue == "priority") {
+        filteredRows = rows.filter((row) => row.priority != "")
+      }
+      if (fieldValue == "niceness") {
+        filteredRows = rows.filter((row) => row.niceness != "")
+      }
+      if (fieldValue == "startTime") {
+        filteredRows = rows.filter((row) => row.startTime != "")
+      }
+      if (fieldValue == "vsize") {
+        filteredRows = rows.filter((row) => row.vsize != "")
+      }
+      if (fieldValue == "rss") {
+        filteredRows = rows.filter((row) => row.rss != "")
+
+      }
+      if (fieldValue == "threads") {
+        filteredRows = rows.filter((row) => row.threads != "")
+      }
+      if (fieldValue == "cpuTime") {
+        filteredRows = rows.filter((row) => row.cpuTime != "")
+      }
+    }
+    if (filterOperator == "isAnyOf") {
+      if (fieldValue == "processName") {
+        filteredRows = rows.filter((row) => row.processName == filterValue)
+      }
+      if (fieldValue == "pid") {
+        filteredRows = rows.filter((row) => row.pid == filterValue)
+      }
+      if (fieldValue == "ppid") {
+        filteredRows = rows.filter((row) => row.ppid == filterValue)
+      }
+      if (fieldValue == "state") {
+        filteredRows = rows.filter((row) => row.state == filterValue)
+      }
+      if (fieldValue == "priority") {
+        filteredRows = rows.filter((row) => row.priority == filterValue)
+      }
+      if (fieldValue == "niceness") {
+        filteredRows = rows.filter((row) => row.niceness == filterValue)
+      }
+      if (fieldValue == "startTime") {
+        filteredRows = rows.filter((row) => row.startTime == filterValue)
+      }
+      if (fieldValue == "vsize") {
+        filteredRows = rows.filter((row) => row.vsize == filterValue)
+      }
+      if (fieldValue == "rss") {
+        filteredRows = rows.filter((row) => row.rss == filterValue)
+
+      }
+      if (fieldValue == "threads") {
+        filteredRows = rows.filter((row) => row.threads == filterValue)
+      }
+      if (fieldValue == "cpuTime") {
+        filteredRows = rows.filter((row) => row.cpuTime == filterValue)
+      }
+    }
+  }
+
   return (
     <>
-    <Box style={{
-        display: 'flex',
-        justifyContent: 'center',
-        height: '100vh',
-        padding: '15px 0px 0px 0px',
-      }} sx={{ width: '100%' }}>
-    <Paper sx={{ height: '50%', width: '97%'}}>
-      <TableContainer sx={{ maxHeight: '50vh'}}>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell align="left" width= '9vw'>Process Name</TableCell>
-              <TableCell align="right" width= '9vw'>PID</TableCell>
-              <TableCell align="right" width= '9vw'>PPID</TableCell>
-              <TableCell align="right" width= '9vw'>State</TableCell>
-              <TableCell align="right" width= '9vw'>Priority</TableCell>
-              <TableCell align="right" width= '9vw'>Niceness</TableCell>
-              <TableCell align="right" width= '9vw'>Start Time</TableCell>
-              <TableCell align="right" width= '9vw'>Vsize</TableCell>
-              <TableCell align="right" width= '9vw'>RSS</TableCell>
-              <TableCell align="right" width= '9vw'>Threads</TableCell>
-              <TableCell align="right" width= '9vw'>CPU Time</TableCell>
+      <Box sx={{
+        height: '50vh', width: '88vw', alignItems: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', m: 2, p: 1, bgcolor: 'background.paper', borderRadius: 1, marginLeft: '4.5vw'
+      }}>
+        <ThemeProvider theme={tabletheme}>
+          <DataGridPremium
+            apiRef={apiRef}
+            onFilterModelChange={() => {
 
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {
-              processes.map(p => (
-                <TableRow
-                  key={p.pid}
-                  sx={{ '&:last-child td, &:last-child th': { border: 0 }}}
-                >
-                  <TableCell align="left" component="th">
-                    {p.name}
-                  </TableCell>
-                  <TableCell align="right" width= '9vw'>{p.pid}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.ppid}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.state}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.priority}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.niceness}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.start_time}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.vsize}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.rss}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.threads}</TableCell>
-                  <TableCell align="right" width= '9vw'>{p.cpu_time}</TableCell>
-                </TableRow>
-              ))
+              filterValue = apiRef.current.state.filter.filterModel.items[0].value; // "k"
+
+              if (filterValue == "" || filterValue == null || filterValue == undefined)
+                filteredBool = 0;
+              else
+                filteredBool = 1;
+              filterOperator = apiRef.current.state.filter.filterModel.items[0].operator; // contains
+              fieldValue = apiRef.current.state.filter.filterModel.items[0].field; // processName
+              getFilterResult(filterOperator, filterValue, fieldValue);
+              ``
+
+              console.log(apiRef.current.state.filter.filterModel);
+
+              // console.log(filteredRows)
+
             }
-          </TableBody>
-        </Table>
-    </TableContainer>
-    </Paper>
-    </Box>
+            }
+            slots={
+              {
+                toolbar: GridToolbar,
+                row: MemoizedRow,
+                columnHeaders: MemoizedColumnHeaders,
+              }
+            }
+            density='compact'
+            rows={rows}
+            columns={columns}
+
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 300,
+                },
+              },
+            }}
+            pageSizeOptions={[5]}
+
+            columnBuffer={2} columnThreshold={10}
+            sx={{
+              boxShadow: 3,
+              border: 2,
+              borderRadius: 3,
+              borderColor: '#448b79',
+              '& .MuiDataGrid-cell:hover': {
+                color: '#609e88',
+              },
+              '.MuiDataGrid-columnSeparator': {
+                display: 'none',
+              },
+              '&.MuiDataGrid-cell': {
+                backgroundColor: '#000000',
+              },
+              '& .theme--header': {
+                backgroundColor: '#a9c4b8',
+                color: '#ffffff',
+                fontSize: '1rem',
+                fontWeight: 'bolder',
+                font: 'Helvetica Neue',
+              },
+            }}
+          />
+        </ThemeProvider>
+      </Box>
+      <div style={{ display: "flex" }}>
+        <ResponsiveContainer width={850} height={400}>
+          <AreaChart data={cpuChartData} dot={true}>
+            <XAxis dataKey="name" />
+            <YAxis type="number" domain={[0, 100]} />
+            <Legend />
+            <Area type="monotone" dataKey="CPU" isAnimationActive={true} fill="url(#cpuPerGraph)" />
+            <defs>
+              <linearGradient id="cpuPerGraph" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="1%" stopColor="rgb(88, 80, 141)" stopOpacity={0.9} />
+                <stop offset="99%" stopColor="rgb(88, 80, 141)" stopOpacity={0.15} />
+              </linearGradient>
+            </defs>
+          </AreaChart>
+        </ResponsiveContainer >
+        <ResponsiveContainer width={850} height={400}>
+          <AreaChart data={memoryChartData} dot={true}>
+            <XAxis dataKey="name" />
+            <YAxis type="number" domain={[0, 100]} />
+            <Legend />
+            <Area type="monotone" dataKey="Memory" isAnimationActive={true} animationDuration={50} fill="url(#memPerGraph)" />
+            <defs>
+              <linearGradient id="memPerGraph" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="1%" stopColor="rgb(11, 60, 73)" stopOpacity={0.9} />
+                <stop offset="99%" stopColor="rgb(11, 60, 73)" stopOpacity={0.15} />
+              </linearGradient>
+            </defs>
+          </AreaChart>
+        </ResponsiveContainer >
+      </div>
+
     </>
+
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-// import * as React from 'react';
-// import PropTypes from 'prop-types';
-// import { alpha } from '@mui/material/styles';
-// import Box from '@mui/material/Box';
-// import Table from '@mui/material/Table';
-// import TableBody from '@mui/material/TableBody';
-// import TableCell from '@mui/material/TableCell';
-// import TableContainer from '@mui/material/TableContainer';
-// import TableHead from '@mui/material/TableHead';
-// import TablePagination from '@mui/material/TablePagination';
-// import TableRow from '@mui/material/TableRow';
-// import TableSortLabel from '@mui/material/TableSortLabel';
-// import Toolbar from '@mui/material/Toolbar';
-// import Typography from '@mui/material/Typography';
-// import Paper from '@mui/material/Paper';
-// import Checkbox from '@mui/material/Checkbox';
-// import IconButton from '@mui/material/IconButton';
-// import Tooltip from '@mui/material/Tooltip';
-// import FormControlLabel from '@mui/material/FormControlLabel';
-// import Switch from '@mui/material/Switch';
-// import DeleteIcon from '@mui/icons-material/Delete';
-// import FilterListIcon from '@mui/icons-material/FilterList';
-// import { visuallyHidden } from '@mui/utils';
-
-// function createData(name, calories, fat, carbs, protein) {
-//   return {
-//     name,
-//     calories,
-//     fat,
-//     carbs,
-//     protein,
-//   };
-// }
-
-// const rows = [
-//   createData('Cupcake', 305, 3.7, 67, 4.3),
-//   createData('Donut', 452, 25.0, 51, 4.9),
-//   createData('Eclair', 262, 16.0, 24, 6.0),
-//   createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-//   createData('Gingerbread', 356, 16.0, 49, 3.9),
-//   createData('Honeycomb', 408, 3.2, 87, 6.5),
-//   createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-//   createData('Jelly Bean', 375, 0.0, 94, 0.0),
-//   createData('KitKat', 518, 26.0, 65, 7.0),
-//   createData('Lollipop', 392, 0.2, 98, 0.0),
-//   createData('Marshmallow', 318, 0, 81, 2.0),
-//   createData('Nougat', 360, 19.0, 9, 37.0),
-//   createData('Oreo', 437, 18.0, 63, 4.0),
-// ];
-
-// function descendingComparator(a, b, orderBy) {
-//   if (b[orderBy] < a[orderBy]) {
-//     return -1;
-//   }
-//   if (b[orderBy] > a[orderBy]) {
-//     return 1;
-//   }
-//   return 0;
-// }
-
-// function getComparator(order, orderBy) {
-//   return order === 'desc'
-//     ? (a, b) => descendingComparator(a, b, orderBy)
-//     : (a, b) => -descendingComparator(a, b, orderBy);
-// }
-
-// // Since 2020 all major browsers ensure sort stability with Array.prototype.sort().
-// // stableSort() brings sort stability to non-modern browsers (notably IE11). If you
-// // only support modern browsers you can replace stableSort(exampleArray, exampleComparator)
-// // with exampleArray.slice().sort(exampleComparator)
-// function stableSort(array, comparator) {
-//   const stabilizedThis = array.map((el, index) => [el, index]);
-//   stabilizedThis.sort((a, b) => {
-//     const order = comparator(a[0], b[0]);
-//     if (order !== 0) {
-//       return order;
-//     }
-//     return a[1] - b[1];
-//   });
-//   return stabilizedThis.map((el) => el[0]);
-// }
-
-// const headCells = [
-//   {
-//     id: 'name',
-//     numeric: false,
-//     disablePadding: true,
-//     label: 'Dessert (100g serving)',
-//   },
-//   {
-//     id: 'calories',
-//     numeric: true,
-//     disablePadding: false,
-//     label: 'Calories',
-//   },
-//   {
-//     id: 'fat',
-//     numeric: true,
-//     disablePadding: false,
-//     label: 'Fat (g)',
-//   },
-//   {
-//     id: 'carbs',
-//     numeric: true,
-//     disablePadding: false,
-//     label: 'Carbs (g)',
-//   },
-//   {
-//     id: 'protein',
-//     numeric: true,
-//     disablePadding: false,
-//     label: 'Protein (g)',
-//   },
-// ];
-
-// function EnhancedTableHead(props) {
-//   const { order, orderBy, rowCount, onRequestSort } =
-//     props;
-//   const createSortHandler = (property) => (event) => {
-//     onRequestSort(event, property);
-//   };
-
-//   return (
-//     <TableHead>
-//       <TableRow>
-//         <TableCell >
-//         </TableCell>
-//         {headCells.map((headCell) => (
-//           <TableCell
-//             key={headCell.id}
-//             align={headCell.numeric ? 'right' : 'left'}
-//             padding={headCell.disablePadding ? 'none' : 'normal'}
-//             sortDirection={orderBy === headCell.id ? order : false}
-//           >
-//             <TableSortLabel
-//               active={orderBy === headCell.id}
-//               direction={orderBy === headCell.id ? order : 'asc'}
-//               onClick={createSortHandler(headCell.id)}
-//             >
-//               {headCell.label}
-//               {orderBy === headCell.id ? (
-//                 <Box component="span" sx={visuallyHidden}>
-//                   {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-//                 </Box>
-//               ) : null}
-//             </TableSortLabel>
-//           </TableCell>
-//         ))}
-//       </TableRow>
-//     </TableHead>
-//   );
-// }
-
-// EnhancedTableHead.propTypes = {
-//   onRequestSort: PropTypes.func.isRequired,
-//   order: PropTypes.oneOf(['asc', 'desc']).isRequired,
-//   orderBy: PropTypes.string.isRequired,
-//   rowCount: PropTypes.number.isRequired,
-// };
-
-
-
-// export default function EnhancedTable() {
-//   const [order, setOrder] = React.useState('asc');
-//   const [orderBy, setOrderBy] = React.useState('calories');
-//   const [page, setPage] = React.useState(0);
-//   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-
-//   const handleRequestSort = (event, property) => {
-//     const isAsc = orderBy === property && order === 'asc';
-//     setOrder(isAsc ? 'desc' : 'asc');
-//     setOrderBy(property);
-//   };
-
-//   // Avoid a layout jump when reaching the last page with empty rows.
-//   const emptyRows =
-//     page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
-
-//   const visibleRows = React.useMemo(
-//     () =>
-//       stableSort(rows, getComparator(order, orderBy)).slice(
-//         page * rowsPerPage,
-//         page * rowsPerPage + rowsPerPage,
-//       ),
-//     [order, orderBy, page, rowsPerPage],
-//   );
-
-//   return (
-//     <Box sx={{ width: '100%' }}>
-//       <Paper sx={{ width: '100%', mb: 2 }}>
-
-//         <TableContainer>
-//           <Table
-//             sx={{ minWidth: 750 }}
-//             aria-labelledby="tableTitle"
-//             size="small"
-//           >
-//             <EnhancedTableHead
-//               order={order}
-//               orderBy={orderBy}
-//               onRequestSort={handleRequestSort}
-//               rowCount={rows.length}
-//             />
-//             <TableBody>
-//               {visibleRows.map((p) => {
-
-//                 return (
-//                   <TableRow
-//                     hover
-//                     key={p.pid}
-//                     sx={{ cursor: 'pointer' }}
-//                   >
-//                     <TableCell>
-//                     </TableCell>
-//                     <TableCell
-//                       component="th"
-//                       scope="row"
-//                       padding="none"
-//                     >
-//                       {p.name}
-//                     </TableCell>
-//                     <TableCell align="right">{p.name}</TableCell>
-//                     <TableCell align="right">{p.pid}</TableCell>
-//                     <TableCell align="right">{p.ppid}</TableCell>
-//                     <TableCell align="right">{p.state}</TableCell>
-//                     <TableCell align="right">{p.priority}</TableCell>
-//                     <TableCell align="right">{p.niceness}</TableCell>
-//                     <TableCell align="right">{p.start_time}</TableCell>
-//                     <TableCell align="right">{p.vsize}</TableCell>
-//                     <TableCell align="right">{p.rss}</TableCell>
-//                     <TableCell align="right">{p.threads}</TableCell>
-//                     <TableCell align="right">{p.cpu_time}</TableCell>
-//                   </TableRow>
-//                 );
-//               })}
-//               {emptyRows > 0 && (
-//                 <TableRow
-//                   style={{
-//                     height: (dense ? 33 : 53) * emptyRows,
-//                   }}
-//                 >
-//                   <TableCell colSpan={6} />
-//                 </TableRow>
-//               )}
-//             </TableBody>
-//           </Table>
-//         </TableContainer>
-//       </Paper>
-//     </Box>
-//   );
-// }
-
-
-
-
-
-
-
-
-
-
-// import * as React from 'react';
-// import PropTypes from 'prop-types';
-// import { alpha } from '@mui/material/styles';
-// import Box from '@mui/material/Box';
-// import Table from '@mui/material/Table';
-// import TableBody from '@mui/material/TableBody';
-// import TableCell from '@mui/material/TableCell';
-// import TableContainer from '@mui/material/TableContainer';
-// import TableHead from '@mui/material/TableHead';
-// import TablePagination from '@mui/material/TablePagination';
-// import TableRow from '@mui/material/TableRow';
-// import TableSortLabel from '@mui/material/TableSortLabel';
-// import Toolbar from '@mui/material/Toolbar';
-// import Typography from '@mui/material/Typography';
-// import Paper from '@mui/material/Paper';
-// import Checkbox from '@mui/material/Checkbox';
-// import IconButton from '@mui/material/IconButton';
-// import Tooltip from '@mui/material/Tooltip';
-// import FormControlLabel from '@mui/material/FormControlLabel';
-// import Switch from '@mui/material/Switch';
-// import DeleteIcon from '@mui/icons-material/Delete';
-// import FilterListIcon from '@mui/icons-material/FilterList';
-// import { visuallyHidden } from '@mui/utils';
-
-// function createData(name, calories, fat, carbs, protein) {
-//   return {
-//     name,
-//     calories,
-//     fat,
-//     carbs,
-//     protein,
-//   };
-// }
-
-// const rows = [
-//   createData('Cupcake', 305, 3.7, 67, 4.3),
-//   createData('Donut', 452, 25.0, 51, 4.9),
-//   createData('Eclair', 262, 16.0, 24, 6.0),
-//   createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-//   createData('Gingerbread', 356, 16.0, 49, 3.9),
-//   createData('Honeycomb', 408, 3.2, 87, 6.5),
-//   createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-//   createData('Jelly Bean', 375, 0.0, 94, 0.0),
-//   createData('KitKat', 518, 26.0, 65, 7.0),
-//   createData('Lollipop', 392, 0.2, 98, 0.0),
-//   createData('Marshmallow', 318, 0, 81, 2.0),
-//   createData('Nougat', 360, 19.0, 9, 37.0),
-//   createData('Oreo', 437, 18.0, 63, 4.0),
-// ];
-
-// function descendingComparator(a, b, orderBy) {
-//   if (b[orderBy] < a[orderBy]) {
-//     return -1;
-//   }
-//   if (b[orderBy] > a[orderBy]) {
-//     return 1;
-//   }
-//   return 0;
-// }
-
-// function getComparator(order, orderBy) {
-//   return order === 'desc'
-//     ? (a, b) => descendingComparator(a, b, orderBy)
-//     : (a, b) => -descendingComparator(a, b, orderBy);
-// }
-
-// // Since 2020 all major browsers ensure sort stability with Array.prototype.sort().
-// // stableSort() brings sort stability to non-modern browsers (notably IE11). If you
-// // only support modern browsers you can replace stableSort(exampleArray, exampleComparator)
-// // with exampleArray.slice().sort(exampleComparator)
-// function stableSort(array, comparator) {
-//   const stabilizedThis = array.map((el, index) => [el, index]);
-//   stabilizedThis.sort((a, b) => {
-//     const order = comparator(a[0], b[0]);
-//     if (order !== 0) {
-//       return order;
-//     }
-//     return a[1] - b[1];
-//   });
-//   return stabilizedThis.map((el) => el[0]);
-// }
-
-// const headCells = [
-//   {
-//     id: 'name',
-//     numeric: false,
-//     disablePadding: true,
-//     label: 'Dessert (100g serving)',
-//   },
-//   {
-//     id: 'calories',
-//     numeric: true,
-//     disablePadding: false,
-//     label: 'Calories',
-//   },
-//   {
-//     id: 'fat',
-//     numeric: true,
-//     disablePadding: false,
-//     label: 'Fat (g)',
-//   },
-//   {
-//     id: 'carbs',
-//     numeric: true,
-//     disablePadding: false,
-//     label: 'Carbs (g)',
-//   },
-//   {
-//     id: 'protein',
-//     numeric: true,
-//     disablePadding: false,
-//     label: 'Protein (g)',
-//   },
-// ];
-
-// function EnhancedTableHead(props) {
-//   const { order, orderBy, rowCount, onRequestSort } =
-//     props;
-//   const createSortHandler = (property) => (event) => {
-//     onRequestSort(event, property);
-//   };
-
-//   return (
-//     <TableHead>
-//       <TableRow>
-//         <TableCell >
-//         </TableCell>
-//         {headCells.map((headCell) => (
-//           <TableCell
-//             key={headCell.id}
-//             align={headCell.numeric ? 'right' : 'left'}
-//             padding={headCell.disablePadding ? 'none' : 'normal'}
-//             sortDirection={orderBy === headCell.id ? order : false}
-//           >
-//             <TableSortLabel
-//               active={orderBy === headCell.id}
-//               direction={orderBy === headCell.id ? order : 'asc'}
-//               onClick={createSortHandler(headCell.id)}
-//             >
-//               {headCell.label}
-//               {orderBy === headCell.id ? (
-//                 <Box component="span" sx={visuallyHidden}>
-//                   {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-//                 </Box>
-//               ) : null}
-//             </TableSortLabel>
-//           </TableCell>
-//         ))}
-//       </TableRow>
-//     </TableHead>
-//   );
-// }
-
-// EnhancedTableHead.propTypes = {
-//   onRequestSort: PropTypes.func.isRequired,
-//   order: PropTypes.oneOf(['asc', 'desc']).isRequired,
-//   orderBy: PropTypes.string.isRequired,
-//   rowCount: PropTypes.number.isRequired,
-// };
-
-
-
-// export default function EnhancedTable() {
-//   const [order, setOrder] = React.useState('asc');
-//   const [orderBy, setOrderBy] = React.useState('calories');
-//   const [page, setPage] = React.useState(0);
-//   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-
-//   const handleRequestSort = (event, property) => {
-//     const isAsc = orderBy === property && order === 'asc';
-//     setOrder(isAsc ? 'desc' : 'asc');
-//     setOrderBy(property);
-//   };
-
-//   // Avoid a layout jump when reaching the last page with empty rows.
-//   const emptyRows =
-//     page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
-
-//   const visibleRows = React.useMemo(
-//     () =>
-//       stableSort(rows, getComparator(order, orderBy)).slice(
-//         page * rowsPerPage,
-//         page * rowsPerPage + rowsPerPage,
-//       ),
-//     [order, orderBy, page, rowsPerPage],
-//   );
-
-//   return (
-//     <Box sx={{ width: '100%' }}>
-//       <Paper sx={{ width: '100%', mb: 2 }}>
-
-//         <TableContainer>
-//           <Table
-//             sx={{ minWidth: 750 }}
-//             aria-labelledby="tableTitle"
-//             size="small"
-//           >
-//             <EnhancedTableHead
-//               order={order}
-//               orderBy={orderBy}
-//               onRequestSort={handleRequestSort}
-//               rowCount={rows.length}
-//             />
-//             <TableBody>
-//               {visibleRows.map((row) => {
-
-//                 return (
-//                   <TableRow
-//                     hover
-//                     onClick={(event) => handleClick(event, row.name)}
-//                     key={row.name}
-//                     sx={{ cursor: 'pointer' }}
-//                   >
-//                     <TableCell>
-//                     </TableCell>
-//                     <TableCell
-//                       component="th"
-//                       scope="row"
-//                       padding="none"
-//                     >
-//                       {row.name}
-//                     </TableCell>
-//                     <TableCell align="right">{row.calories}</TableCell>
-//                     <TableCell align="right">{row.fat}</TableCell>
-//                     <TableCell align="right">{row.carbs}</TableCell>
-//                     <TableCell align="right">{row.protein}</TableCell>
-//                   </TableRow>
-//                 );
-//               })}
-//               {emptyRows > 0 && (
-//                 <TableRow
-//                   style={{
-//                     height: (dense ? 33 : 53) * emptyRows,
-//                   }}
-//                 >
-//                   <TableCell colSpan={6} />
-//                 </TableRow>
-//               )}
-//             </TableBody>
-//           </Table>
-//         </TableContainer>
-//       </Paper>
-//     </Box>
-//   );
-// }

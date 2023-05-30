@@ -1,0 +1,38 @@
+.App {
+    float: left;
+    align-items: center;
+    justify-content: center;
+    width: 75%;
+    padding: 0% 2%;
+    /* border-radius: 50px; */
+    margin-top: 5vh;
+    margin-left: 10vw;
+    margin-right: 20vw;
+    /* display: flex; */
+    font-size: 1em;
+    border-radius: 2px;
+    box-shadow: 6px 6px rgba(68, 140, 121, 1);
+    background-color: rgb(240, 237, 237);
+    border: 1px 1px 1px 1px rgba(68, 140, 121, 1);
+    font-family: 'News Cycle', sans-serif;
+}
+
+.tab {
+    background-color: #448B79;
+    /* margin-left: 10px; */
+    margin-left: 10vw;
+    margin-right: 10px;
+    margin-top: 25px;
+    height: 4vh;
+    width: 15vw;
+    border-radius: 0 100px 0 0;
+    text-align: center;
+    text-justify: center;
+    text-align: left;
+    vertical-align: bottom;
+    bottom: 0;
+    right: 0;
+    font: 1.5rem 'News Cycle', sans-serif;
+    color: beige;
+    padding-left: 1em;
+}

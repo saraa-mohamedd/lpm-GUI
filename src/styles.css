@@ -12,11 +12,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-  margin: 0;
-}
-
-:body {
-  margin: 0;
 }
 
 .container {
@@ -111,9 +106,4 @@ button {
   button:active {
     background-color: #0f0f0f69;
   }
-}
-
-.table-head{
-  background-color: #a4dac8 !important;
-  color: #2b3330 !important;
 }

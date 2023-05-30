@@ -3,20 +3,23 @@ import { Nav, NavLink, NavMenu }
 	from "./NavBarElements";
 
 const Navbar = () => {
-return (
-	<>
-	<Nav>
-		<NavMenu>
-		<NavLink to="/ProcView" activeStyle>
-			Process View
-		</NavLink>
-		<NavLink to="/SysView" activeStyle>
-			System View
-		</NavLink>
-		</NavMenu>
-	</Nav>
-	</>
-);
+	return (
+		<>
+			<Nav>
+				<NavMenu>
+					<NavLink to="/ProcView" activeStyle>
+						Process View
+					</NavLink>
+					<NavLink to="/SysView" activeStyle>
+						System View
+					</NavLink>
+					<NavLink to="/TreeView" activeStyle>
+						Tree View
+					</NavLink>
+				</NavMenu>
+			</Nav>
+		</>
+	);
 };
 
 export default Navbar;
